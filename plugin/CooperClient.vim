@@ -10,15 +10,16 @@ let g:COOPER_CLIENT = s:cooperClient
 
 " @accessible
 function! s:cooperClient.New() dict
+	let cooperClient = deepcopy(self)
 	if(exists("g:syncChannel") && g:syncChannel != "")
-		let self.socket = g:syncChannel
+		let cooperClient.socket = g:syncChannel
 	else
-		let self.socket = v:null
+		let cooperClient.socket = v:null
 	endif
 	
-	let self.models = {}
+	let cooperClient.models = {}
 
-	let self.EVENT_TYPE = #{
+	let cooperClient.EVENT_TYPE = #{
 		\ CONNECT: "connect",
 		\ DISCONNECT: "disconnect",
 		\ SUBSCRIBE: "subscribe",
@@ -28,10 +29,10 @@ function! s:cooperClient.New() dict
 		\ GLOBAL_METADATA: "global_metadata",
 		\ ERROR: "error" }
 
-	let self.events = {}
-	let self.singleEvents = {}
+	let cooperClient.events = {}
+	let cooperClient.singleEvents = {}
 
-	return deepcopy(self)
+	return cooperClient
 endfun
 
 " on, attach a function to an event of the cooper_client. Use this to subscribe to

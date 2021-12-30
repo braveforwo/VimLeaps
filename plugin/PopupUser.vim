@@ -7,19 +7,20 @@ let g:POPUP_USER = s:popupUser
 
 call prop_type_add('popupMarker', {})
 " @accessible
-function! s:New() dict 
-	let self.ID = -1
-	let self.username = ""
-	let self.line = -1
-	let self.col = -1
-	let self.highlight = ""
-	let self.flag = "🚩"
-	let self.sessionId = 0
-	return deepcopy(self)
+function! s:popupUser.New() dict 
+	let popupUser = deepcopy(self)
+	let popupUser.ID = -1
+	let popupUser.username = ""
+	let popupUser.line = -1
+	let popupUser.col = -1
+	let popupUser.highlight = ""
+	let popupUser.flag = "🚩"
+	let popupUser.sessionId = 0
+	return popupUser
 endfun
 
 " @accessible
-function! s:CreatePopup() dict
+function! s:popupUser.CreatePopup() dict
 	call prop_add(self.line, self.col - 1 > 0 ? self.col - 1 : 1, #{length:1, type:"popupMarker", id:self.propId})
 	let self.ID = popup_create(self.flag.self.username, #{
 				\pos: "botleft",
@@ -31,13 +32,13 @@ function! s:CreatePopup() dict
 endfun
 
 " @accessible
-function! s:SetText(username) dict
+function! s:popupUser.SetText(username) dict
 	let self.username = a:username
 	call popup_settext(self.ID, self.flag . self.username)
 endfun
 
 " @accessible
-function! s:SetOption(options) dict
+function! s:popupUser.SetOption(options) dict
 	let self.username = a:options.username
         let self.line = a:options.line
 	let self.col = a:options.col
@@ -46,14 +47,14 @@ function! s:SetOption(options) dict
 endfun
 
 " @accessible
-function! s:PopupMove(options) dict
+function! s:popupUser.PopupMove(options) dict
 	let self.line = a:options.line
 	let self.col = a:options.col
 	call popup_move(self.ID, a:options)
 endfun
 
 " @accessible
-function! s:ClosePopup() dict
+function! s:popupUser.ClosePopup() dict
 	call prop_remove(#{id: self.propId})
 	call popup_close(self.ID)
 endfun

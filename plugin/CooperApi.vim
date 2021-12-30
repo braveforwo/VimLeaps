@@ -5,9 +5,6 @@ endif
 " The path head for this script is needed for working with other modules.
 let s:SCRIPT_ROOT = expand("<sfile>:p:h") . "/"
 
-" Apply object-oriented technique in our framework.
-exe "so ".s:SCRIPT_ROOT."ObjectBuilder.vim"
-
 " Apply codepoint arrays using the ES6triple dot operator.
 exe "so ".s:SCRIPT_ROOT."CooperStr.vim"
 
@@ -24,8 +21,8 @@ exe "so ".s:SCRIPT_ROOT."CooperBindVim.vim"
 " LeapClient and uses it to wrap a vim
 exe "so ".s:SCRIPT_ROOT."PopupUser.vim"
 
-let g:COOPER_API=expand("<sfile>:p")
-call DefineClass(g:COOPER_API,{},[])
+let s:cooperApi = {}
+let g:COOPER_API = s:cooperApi
 
 " any buffer BindVim Object
 let g:COOPERsVim = []
@@ -53,8 +50,8 @@ function! s:StartCollaborative(file, root, username, projectid)
 	if(exists("b:cooperBindVim"))
 		return
 	endif
-	let b:cooperClient = CreateInstance(g:COOPER_CLIENT,{}).New()
-	let b:cooperBindVim = CreateInstance(g:COOPER_BIND_VIM,{}).New(b:cooperClient, vim)
+	let b:cooperClient = g:COOPER_CLIENT.New()
+	let b:cooperBindVim = g:COOPER_BIND_VIM.New(b:cooperClient, vim)
 	call b:cooperBindVim.InitEvent()
 
 	call add(g:COOPERsVim, b:cooperBindVim)

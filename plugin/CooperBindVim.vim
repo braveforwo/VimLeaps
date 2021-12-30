@@ -11,17 +11,18 @@ let g:COOPER_BIND_VIM = s:cooperBindVim
 " vim is #{bufnr:5}
 " @accessible
 function! s:cooperBindVim.New(cooperClient, vim) dict
-	let self.textArea = a:vim
-	let self.cooperClient = a:cooperClient
-	let self.documentId = ""
-	let self.content = ""
-	let self.ready = 0
-	let self.textArea.disabled = 1
-	let self.startSync = 0
-	let self.cursors = {}
+	let cooperBindVim = deepcopy(self)
+	let cooperBindVim.textArea = a:vim
+	let cooperBindVim.cooperClient = a:cooperClient
+	let cooperBindVim.documentId = ""
+	let cooperBindVim.content = ""
+	let cooperBindVim.ready = 0
+	let cooperBindVim.textArea.disabled = 1
+	let cooperBindVim.startSync = 0
+	let cooperBindVim.cursors = {}
 	let binder = self
 
-	return deepcopy(self)
+	return cooperBindVim
 endfun
 
 " load event

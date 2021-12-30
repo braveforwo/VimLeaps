@@ -11,17 +11,18 @@ let g:COOPER_STR = s:cooperStr
 " Param any_str either a standard string or an array of unicode codepoints.
 " @accessible
 function! s:cooperStr.New(anystr) dict
+	let cooperStr = deepcopy(self)
 	if(type(a:anystr)==v:t_dict)
-		let self.str = a:anystr.Str()
-		let self.ustr = a:anystr.UStr()
+		let cooperStr.str = a:anystr.Str()
+		let cooperStr.ustr = a:anystr.UStr()
 	elseif(type(a:anystr)==v:t_string) 
-		let self.str = a:anystr
+		let cooperStr.str = a:anystr
 	elseif(type(a:anystr)==v:t_list)
-		let self.ustr = a:anystr
+		let cooperStr.ustr = a:anystr
 	else
 		throw "attempted to construct cooper_str with non-string/array type"
 	endif	
-	return deepcopy(self)	
+	return cooperStr
 endfun
 
 " Returns the standard underlying string.

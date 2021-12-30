@@ -17,20 +17,21 @@ let g:COOPER_MODEL = s:cooperModel
 "                for the transforms that came before that send to be received before moving on.
 " @accessible
 function! s:cooperModel.New(id, baseVersion) dict
-	let self.id = a:id
-	let self.READY = 1
-	let self.SENDING = 2
-	let self.BUFFERING = 3
+	let cooperModel = deepcopy(self)
+	let cooperModel.id = a:id
+	let cooperModel.READY = 1
+	let cooperModel.SENDING = 2
+	let cooperModel.BUFFERING = 3
 	
-	let self.cooperState = self.READY
+	let cooperModel.cooperState = self.READY
 	
-	let self.correctedVersion = 0
-	let self.version = a:baseVersion
+	let cooperModel.correctedVersion = 0
+	let cooperModel.version = a:baseVersion
 
-	let self.unapplied = []
-	let self.unsent = []
-	let self.sending = v:null 
-	return deepcopy(self)
+	let cooperModel.unapplied = []
+	let cooperModel.unsent = []
+	let cooperModel.sending = v:null 
+	return cooperModel
 endfun
 
 " Validate Transforms iterates an array of transform objects and validates that each transform
