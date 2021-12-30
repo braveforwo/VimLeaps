@@ -2,16 +2,15 @@ if(exists("g:COOPER_BIND_VIM"))
 	finish
 endif
 
-let g:COOPER_BIND_VIM=expand("<sfile>:p")
-call DefineClass(g:COOPER_BIND_VIM,{},[])
-
+let s:cooperBindVim = {}
+let g:COOPER_BIND_VIM = s:cooperBindVim
 
 " leap_bind_vim takes an existing leap_client and uses it to wrap a textarea into an
 " interactive editor for the leaps document the client connects to. Returns the bound object, and
 " places any errors in the obj.error field to be checked after construction.
 " vim is #{bufnr:5}
 " @accessible
-function! s:New(cooperClient, vim) dict 
+function! s:cooperBindVim.New(cooperClient, vim) dict
 	let self.textArea = a:vim
 	let self.cooperClient = a:cooperClient
 	let self.documentId = ""
@@ -27,7 +26,7 @@ endfun
 
 " load event
 " @accessible
-function! s:InitEvent() dict
+function! s:cooperBindVim.InitEvent() dict
 	if(!has_key(self.textArea, "addEventListener"))
 		let self.textArea.addEventListener = listener_add(self.TriggerDiffbak, self.textArea.bufnr)
 	endif
@@ -53,7 +52,7 @@ endfun
 " apply_transform, applies a single transform to the textarea. 
 " Also attempts to retain the original cursor position.
 " @accessible
-function! s:ApplyTransform(transform) dict
+function! s:cooperBindVim.ApplyTransform(transform) dict
 	let curpos = getcurpos()
 
 	call setbufvar(self.textArea.bufnr, "&buflisted", 1)
@@ -89,7 +88,7 @@ endfun
 " updates any visual state of other users within the
 " vim screen.
 " @accessible
-function! s:UpdateUserInfo(body) dict
+function! s:cooperBindVim.UpdateUserInfo(body) dict
 	if(a:body.metadata.type == "cursor_update" && a:body.metadata.body.document.id == self.documentId)
 		if(has_key(self.cursors, a:body.client.session_id))
 			"if(self.cursors[a:body.client.session_id].position != a:body.metadata.body.position)
@@ -129,7 +128,7 @@ function! s:UpdateUserInfo(body) dict
 				let matchId = matchadd(self.cursors[a:body.client.session_id]["highlight"], pattern) 
 
 				let self.cursors[a:body.client.session_id]["matchid"] = matchId
-				let popupUser = CreateInstance(g:POPUP_USER, {}).New()
+				let popupUser = g:POPUP_USER.New()
 				call popupUser.SetOption(#{username: a:body.client.username, 
 								\ propId: s:Hash(a:body.client.session_id),
 								\ line: cursor[0], col: cursor[1], 
@@ -158,7 +157,7 @@ function! s:UpdateUserInfo(body) dict
 			let matchId = matchadd(self.cursors[a:body.client.session_id]["highlight"], pattern) 
 			
 			let self.cursors[a:body.client.session_id]["matchid"] = matchId
-			let popupUser = CreateInstance(g:POPUP_USER, {}).New()
+			let popupUser = g:POPUP_USER.New()
 			call popupUser.SetOption(#{username: a:body.client.username, 
 							\ propId: s:Hash(a:body.client.session_id),
 							\ line: cursor[0], col: cursor[1], 
@@ -185,7 +184,7 @@ function! s:UpdateUserInfo(body) dict
 endfun
 
 " update cursor 
-function! s:CursorTimer(timer) dict
+function! s:cooperBindVim.CursorTimer(timer) dict
 	if(has_key(self, "isStay"))
 		call matchdelete(self["matchid"])
 		call remove(self, "matchid")
@@ -200,7 +199,7 @@ endfun
  
 " 
 " @accessible
-function! s:MetaData(body) dict
+function! s:cooperBindVim.MetaData(body) dict
 	if(a:body.document.id == self.documentId)
 		if(self.ready)
 			call self.UpdateUserInfo(a:body)
@@ -209,7 +208,7 @@ function! s:MetaData(body) dict
 endfun
 
 " @accessible
-function! s:Connect(body) dict
+function! s:cooperBindVim.Connect(body) dict
 	let username = "user" . rand(srand()) % 16
 	let path = "/home/clouder/project/test123/"
 	call self.cooperClient.OnNext("global_metadata", self.GlobalMata)
@@ -217,7 +216,7 @@ function! s:Connect(body) dict
 endfun
 
 " @accessible
-function! s:Subscribe(body) dict
+function! s:cooperBindVim.Subscribe(body) dict
 		let self.content = a:body.document.content
 		
 		"echom len(a:body.document.content)
@@ -243,65 +242,65 @@ endfun
 " compares the old content with the new content. If a change has indeed occurred then a transform
 " is generated from the comparison and dispatched via the leap_client.
 " @accessible
-function! s:TriggerDiff(bufnr, start, end, added, changes) dict
-	"echom b:cooperBindVim.startSync
-	call SendDiff(self)
-endfun
+" function! s:TriggerDiff(bufnr, start, end, added, changes) dict
+" 	"echom b:cooperBindVim.startSync
+" 	call SendDiff(self)
+" endfun
 
-def! SendDiff(cooperBindVim: dict<any>)
-	"echom cooperBindVim["startSync"]
-	if cooperBindVim["startSync"] == 0
-			call setbufvar(cooperBindVim.textArea.bufnr, "&buflisted", 1)
-			let newContent = call(function(CreateInstance(g:COOPER_STR, {})["New"], CreateInstance(g:COOPER_STR, {})), [join(getbufline(cooperBindVim.textArea.bufnr, 1, "$"), "\n")])
+" def! SendDiff(cooperBindVim: dict<any>)
+" 	"echom cooperBindVim["startSync"]
+" 	if cooperBindVim["startSync"] == 0
+" 			call setbufvar(cooperBindVim.textArea.bufnr, "&buflisted", 1)
+" 			let newContent = call(function(CreateInstance(g:COOPER_STR, {})["New"], CreateInstance(g:COOPER_STR, {})), [join(getbufline(cooperBindVim.textArea.bufnr, 1, "$"), "\n")])
 			
-			let oldContent = cooperBindVim["content"]
-			if type(oldContent) == v:t_string
-				oldContent = call(function(CreateInstance(g:COOPER_STR, {})["New"], CreateInstance(g:COOPER_STR, {})), [cooperBindVim["content"]])
-			endif
-			let newContentStr = call(function(newContent["Str"], newContent), [])
-			let oldContentStr = call(function(oldContent["Str"], oldContent), [])
-			let newContentUStr = call(function(newContent["UStr"], newContent), [])
-			let oldContentUStr = call(function(oldContent["UStr"], oldContent), [])
-			if !cooperBindVim.ready || newContentStr == oldContentStr
-				return
-			endif
+" 			let oldContent = cooperBindVim["content"]
+" 			if type(oldContent) == v:t_string
+" 				oldContent = call(function(CreateInstance(g:COOPER_STR, {})["New"], CreateInstance(g:COOPER_STR, {})), [cooperBindVim["content"]])
+" 			endif
+" 			let newContentStr = call(function(newContent["Str"], newContent), [])
+" 			let oldContentStr = call(function(oldContent["Str"], oldContent), [])
+" 			let newContentUStr = call(function(newContent["UStr"], newContent), [])
+" 			let oldContentUStr = call(function(oldContent["UStr"], oldContent), [])
+" 			if !cooperBindVim.ready || newContentStr == oldContentStr
+" 				return
+" 			endif
 			
-			cooperBindVim["content"] = newContent
-			let i = 0
-			let j = 0
-			while len(oldContentUStr) > i && len(newContentUStr) > i && newContentUStr[i] == oldContentUStr[i]
-				 i = i + 1 
-			endwhile
+" 			cooperBindVim["content"] = newContent
+" 			let i = 0
+" 			let j = 0
+" 			while len(oldContentUStr) > i && len(newContentUStr) > i && newContentUStr[i] == oldContentUStr[i]
+" 				 i = i + 1 
+" 			endwhile
 
-			while (newContentUStr[(len(newContentUStr) - 1 - j)] == oldContentUStr[(len(oldContentUStr) - 1 - j)]) 
-					\ && ((i + j) < len(newContentUStr)) 
-					\ && ((i + j) < len(oldContentUStr))
-				j = j + 1
-			endwhile
-			let tform = #{position: i, num_delete: 0, insert: call(function(CreateInstance(g:COOPER_STR, {})["New"], CreateInstance(g:COOPER_STR, {})), [""])}
+" 			while (newContentUStr[(len(newContentUStr) - 1 - j)] == oldContentUStr[(len(oldContentUStr) - 1 - j)]) 
+" 					\ && ((i + j) < len(newContentUStr)) 
+" 					\ && ((i + j) < len(oldContentUStr))
+" 				j = j + 1
+" 			endwhile
+" 			let tform = #{position: i, num_delete: 0, insert: call(function(CreateInstance(g:COOPER_STR, {})["New"], CreateInstance(g:COOPER_STR, {})), [""])}
 		
-			if len(oldContentUStr) != (i + j) 
-				tform["num_delete"] = (len(oldContentUStr) - (i + j))
-			endif
+" 			if len(oldContentUStr) != (i + j) 
+" 				tform["num_delete"] = (len(oldContentUStr) - (i + j))
+" 			endif
 
-			if len(newContentUStr) != (i + j) 
-				tform["insert"] = call(function(CreateInstance(g:COOPER_STR, {})["New"], CreateInstance(g:COOPER_STR, {})), [list2str(newContentUStr[i : len(newContentUStr) - j - 1])])
-			endif
+" 			if len(newContentUStr) != (i + j) 
+" 				tform["insert"] = call(function(CreateInstance(g:COOPER_STR, {})["New"], CreateInstance(g:COOPER_STR, {})), [list2str(newContentUStr[i : len(newContentUStr) - j - 1])])
+" 			endif
 
-			if has_key(tform, "insert") || has_key(tform, "num_delete")
-				call call(function(cooperBindVim["cooperClient"]["SendTransform"], cooperBindVim["cooperClient"]), [cooperBindVim.documentId, tform])
-			endif
-		endif
-enddef
+" 			if has_key(tform, "insert") || has_key(tform, "num_delete")
+" 				call call(function(cooperBindVim["cooperClient"]["SendTransform"], cooperBindVim["cooperClient"]), [cooperBindVim.documentId, tform])
+" 			endif
+" 		endif
+" enddef
 
 " @accessible
-function! s:TriggerDiffbak(bufnr, start, end, added, changes) dict
+function! s:cooperBindVim.TriggerDiffbak(bufnr, start, end, added, changes) dict
 		if(!self.startSync)
 			call setbufvar(self.textArea.bufnr, "&buflisted", 1)
-			let newContent = CreateInstance(g:COOPER_STR,{}).New(join(getbufline(self.textArea.bufnr, 1, "$"),"\n"))
+			let newContent = g:COOPER_STR.New(join(getbufline(self.textArea.bufnr, 1, "$"),"\n"))
 			let oldContent = self.content
 			if(type(oldContent) == v:t_string)
-				let oldContent = CreateInstance(g:COOPER_STR,{}).New(self.content)
+				let oldContent = g:COOPER_STR.New(self.content)
 			endif
 
 			if(!self.ready || newContent.Str() == oldContent.Str())
@@ -326,7 +325,7 @@ function! s:TriggerDiffbak(bufnr, start, end, added, changes) dict
 			endif
 
 			if(len(newContent.UStr()) != (i + j)) 
-				let tform.insert = CreateInstance(g:COOPER_STR,{}).New(list2str(newContent.UStr()[i:len(newContent.UStr()) - j - 1]))
+				let tform.insert = g:COOPER_STR.New(list2str(newContent.UStr()[i:len(newContent.UStr()) - j - 1]))
 			endif
 
 			if(has_key(tform,"insert") || has_key(tform, "num_delete"))
@@ -337,7 +336,7 @@ function! s:TriggerDiffbak(bufnr, start, end, added, changes) dict
 endfun
 
 " @accessible
-function! s:Transforms(body) dict
+function! s:cooperBindVim.Transforms(body) dict
 	if(a:body.document.id == self.documentId)
 		let transforms = a:body.transforms
 		for tform in transforms
@@ -349,7 +348,7 @@ function! s:Transforms(body) dict
 endfun
 
 " @accessible
-function! s:Unsubscribe(body) dict
+function! s:cooperBindVim.Unsubscribe(body) dict
 	if(a:body.document.id == self.documentId)
 		let self.ready = 0
 		let self.textArea.disabled = 1
@@ -379,7 +378,7 @@ function! SendCursor()
 endfun
 
 " @accessible
-function! s:SendCursorMetadata() dict
+function! s:cooperBindVim.SendCursorMetadata() dict
 	if(self.ready)
 		let position = s:IndexFromPos(self.textArea.bufnr, getcurpos())
 		call self.cooperClient.SendGlobalMetadata(#{
@@ -395,7 +394,7 @@ function! s:SendCursorMetadata() dict
 endfun
 
 " @accessible
-function! s:GlobalMata(body) dict
+function! s:cooperBindVim.GlobalMata(body) dict
 	if(self.ready)
 		call self.UpdateUserInfo(a:body)
 		if(a:body.metadata.type == "user_subscribe")
@@ -415,7 +414,7 @@ function! s:Hash(str)
 	if(type(a:str) != v:t_string || len(a:str) ==0)
 		return 0
 	endif
-	let str = CreateInstance(g:COOPER_STR,{}).New(a:str)
+	let str = g:COOPER_STR.New(a:str)
 	for i in range(len(str.UStr()))
 		let chr = str.UStr()[i]
 		let hash = float2nr(((hash * pow(2, 2)) - hash) + chr)
@@ -510,7 +509,7 @@ function! s:RestorePopup() dict
 			call self.cursors[sessionId]["popup"].ClosePopup()
 			call self.cursors[sessionId]["popup"].CreatePopup()
 		else
-			let popupUser = CreateInstance(g:POPUP_USER, {}).New()
+			let popupUser = g:POPUP_USER.New()
 			call popupUser.SetOption(#{username: self.cursors[sessionId]["username"], 
 								\ line: self.cursors[sessionId]["row"], col: self.cursors[sessionId]["col"], 
 								\ highlight:self.cursors[sessionId]["highlight"]})

@@ -5,12 +5,12 @@ if(exists("g:COOPER_STR"))
 	finish
 endif
 
-let g:COOPER_STR=expand("<sfile>:p")
-call DefineClass(g:COOPER_STR,{},[])
+let s:cooperStr = {}
+let g:COOPER_STR = s:cooperStr
 
 " Param any_str either a standard string or an array of unicode codepoints.
 " @accessible
-function! s:New(anystr) dict
+function! s:cooperStr.New(anystr) dict
 	if(type(a:anystr)==v:t_dict)
 		let self.str = a:anystr.Str()
 		let self.ustr = a:anystr.UStr()
@@ -26,7 +26,7 @@ endfun
 
 " Returns the standard underlying string.
 " @accessible
-function! s:Str() dict
+function! s:cooperStr.Str() dict
 	if(!has_key(self,"str"))
 		let self.str = list2str(self.ustr)
 	endif
@@ -35,7 +35,7 @@ endfun
 
 " Returns the underlying unicode codepoint array.
 " @accessible
-function! s:UStr() dict
+function! s:cooperStr.UStr() dict
 	if(!has_key(self,"ustr"))
 		let self.ustr = str2list(self.str)
 	endif

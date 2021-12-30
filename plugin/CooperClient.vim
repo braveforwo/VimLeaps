@@ -5,11 +5,11 @@ endif
 " cooper_client is the main tool provided to allow an easy and stable interface for 
 " connecting to a coopers server.
 
-let g:COOPER_CLIENT=expand("<sfile>:p")
-call DefineClass(g:COOPER_CLIENT,{},[])
+let s:cooperClient = {}
+let g:COOPER_CLIENT = s:cooperClient
 
 " @accessible
-function! s:New() dict
+function! s:cooperClient.New() dict
 	if(exists("g:syncChannel") && g:syncChannel != "")
 		let self.socket = g:syncChannel
 	else
@@ -37,7 +37,7 @@ endfun
 " on, attach a function to an event of the cooper_client. Use this to subscribe to
 " transforms, document responses and errors etc.
 " @accessible
-function! s:On(name, subscriber) dict
+function! s:cooperClient.On(name, subscriber) dict
 	if(type(a:subscriber) != v:t_func)
 		return "subscriber was not a function"
 	endif
@@ -52,7 +52,7 @@ endfun
 " OnNext, attach a function to the next trigger only of an event of the
 " cooper_client.
 " @accessible
-function! s:OnNext(name, subscriber) dict
+function! s:cooperClient.OnNext(name, subscriber) dict
 	if(type(a:subscriber) != v:t_func)
 		return "subscriber was not a function"
 	endif
@@ -66,14 +66,14 @@ endfun
 
 " ClearHandlers, removes all functions subscribed to an event.
 " @accessible
-function! s:ClearHandlers(name) dict
+function! s:cooperClient.ClearHandlers(name) dict
 	let self.events[a:name] = []
 	let self.singleEvents[a:name] = []
 endfun
 
 " DispatchEvent, sends args to all subscribers of an event.
 " @accessible
-function! s:DispatchEvent(name, args) dict
+function! s:cooperClient.DispatchEvent(name, args) dict
 	if(has_key(self.events, a:name) && type(self.events[a:name]) == v:t_list)
 		for index in range(len(self.events[a:name]))
 			call call(self.events[a:name][index], a:args)
@@ -93,7 +93,7 @@ endfun
 
 " DoAction is a call that acts accordingly provided an action_obj from our cooper model
 " @accessible
-function! s:DoAction(modelId, actionObj) dict
+function! s:cooperClient.DoAction(modelId, actionObj) dict
 	if(has_key(a:actionObj,"error"))
 		return a:actionObj.error
 	endif
@@ -124,7 +124,7 @@ endfun
 " appropriate action to take. If an error occurs during this process then an error message is
 " returned.
 " @accessible
-function! s:ProcessMessage(message) dict
+function! s:cooperClient.ProcessMessage(message) dict
 	let validateError = ""
 	let actionObj = {}
 	let actionErr = ""
@@ -152,7 +152,7 @@ function! s:ProcessMessage(message) dict
 			return
 		endif
 
-		let self.models[msgBody.document.id] = CreateInstance(g:COOPER_MODEL,{}).New(msgBody.document.id, msgBody.document.version)
+		let self.models[msgBody.document.id] = g:COOPER_MODEL.New(msgBody.document.id, msgBody.document.version)
 		
 		call self.DispatchEvent(self.EVENT_TYPE.SUBSCRIBE, [msgBody])
 	
@@ -240,7 +240,7 @@ endfun
 " internally how incoming messages should be altered to account for the fact that the local
 " change was made out of order.
 " @accessible
-function! s:SendTransform(documentId,transform) dict
+function! s:cooperClient.SendTransform(documentId,transform) dict
 	if(!has_key(self.models, a:documentId))
 		return "cooper_client must be subscribed to document before submitting transforms"
 	endif
@@ -261,7 +261,7 @@ endfun
 
 " send metadata out to all other users connected to your shared document.
 " @accessible
-function! s:SendMetadata(documentId,metadata) dict
+function! s:cooperClient.SendMetadata(documentId,metadata) dict
 	if(!has_key(self.models,a:documentId))
 		return "cooper_client must be subscribed to document before submitting metadata"
 	endif
@@ -280,7 +280,7 @@ endfun
 " send global metadata out to all other users connected
 " to the coopers service.
 " @accessible
-function! s:SendGlobalMetadata(metadata) dict
+function! s:cooperClient.SendGlobalMetadata(metadata) dict
 	call self.Send(#{
 		\ type: "global_metadata",
 		\ body: #{
@@ -292,7 +292,7 @@ endfun
 " subscribe to a document session, providing the initial content as well as
 " subsequent changes to the document.
 " @accessible
-function! s:Subscribe(documentId) dict
+function! s:cooperClient.Subscribe(documentId) dict
 	if(self.socket == v:null || ch_status(self.socket) != "open")
 		return "cooper_client is not currently connected"
 	endif
@@ -313,7 +313,7 @@ endfun
 
 " unsubscribe from a document session.
 " @accessible
-function! s:Unsubscribe(documentId) dict
+function! s:cooperClient.Unsubscribe(documentId) dict
 	if(self.socket == v:null || ch_status(self.socket) != "open")
 		return "cooper_client is not currently connected"
 	endif
@@ -336,7 +336,7 @@ endfun
 " bindings. This function will generate a socket connection with the server, ready to bind to a
 " document.
 " @accessible
-function! s:Connect(address) dict
+function! s:cooperClient.Connect(address) dict
 	if(exists("g:syncChannel") && ch_status(g:syncChannel) == "open")	
 		let self.socket = g:syncChannel
 		return
@@ -356,8 +356,6 @@ endfun
 "deal scoekr return message
 " @accessible
 function HandleMessage(channel, msg) 
-	let provider = CreateInstance(g:SERVICE_PROVIDER_CLASS)
-	
 	for cooperBindVim in g:COOPERsVim
 		let cooperObj = cooperBindVim.cooperClient
 
@@ -368,17 +366,10 @@ function HandleMessage(channel, msg)
 			let message = split(a:msg,"\n")
 			for msg in message
 				let err = cooperObj.ProcessMessage(json_decode(msg))
-				let cooperBindVims  = map(deepcopy(g:COOPERsVim), {val -> strpart(v:val["documentId"], 1, len(v:val["documentId"]))})
-				let json = '{"operation":"cooper", "file":'. json_encode(cooperBindVims) .', "data":'.json_encode(msg).'}'
-				call provider.ExecJavaScript(json)
 			endfor
 			return
 		endtry
 		let err = cooperObj.ProcessMessage(messageObj)
-		let cooperBindVims  = map(deepcopy(g:COOPERsVim), {val -> strpart(v:val["documentId"], 1, len(v:val["documentId"]))})
-		let json = '{"operation":"cooper", "file":'. json_encode(cooperBindVims) .', "data":'.json_encode(a:msg).'}'
-		call provider.ExecJavaScript(json)
-		"echom err
 		if(type(err) == v:t_string)
 			call cooperObj.DispatchEvent(cooperObj.EVENT_TYPE.ERROR, [#{
 				\ error: #{
@@ -391,27 +382,27 @@ function HandleMessage(channel, msg)
 endfun
 
 " @accessible
-function! s:Send(message) dict
+function! s:cooperClient.Send(message) dict
 	"echom json_encode(a:message)
 	call ch_sendraw(self.socket, json_encode(a:message))
 endfun
 
 " @accessible
-function! s:OnOpen() dict
+function! s:cooperClient.OnOpen() dict
 	let cooperObj = self
 	call cooperObj.DispatchEvent(cooperObj.EVENT_TYPE.CONNECT,[{}])
 endfun
 
 " Close the connection to the document and halt all operations.
 " @accessible
-function! s:OnClose(channel) dict
+function! s:cooperClient.OnClose(channel) dict
 	let cooperObj = self
 	unlet g:OnceConnect
 	call cooperObj.DispatchEvent(cooperObj.EVENT_TYPE.DISCONNECT,[{}])
 endfun
 
 " @accessible
-function! s:Close() dict
+function! s:cooperClient.Close() dict
 	if ( self.socket != v:null && ch_status(self.socket) != "open" ) 
 		call ch_close(self.socket)
 		self.socket = v:null;
@@ -444,7 +435,7 @@ function! GetLastIndexFromArray(array, charnum)
 endfun
 
 " @accessible
-function! s:Apply(transform, content, binder) dict
+function! s:cooperClient.Apply(transform, content, binder) dict
 	let numDelete = 0
 	let toInsert = ""
 	let content = a:content
@@ -453,7 +444,7 @@ function! s:Apply(transform, content, binder) dict
 	endif
 	
 	if(type(content) != v:t_dict)
-		let content = CreateInstance(g:COOPER_STR,{}).New(content)
+		let content = g:COOPER_STR.New(content)
 	endif
 
 	if(type(a:transform.num_delete) == v:t_number)
@@ -461,7 +452,7 @@ function! s:Apply(transform, content, binder) dict
 	endif
 
 	if(has_key(a:transform,"insert"))
-		let toInsert = CreateInstance(g:COOPER_STR,{}).New(a:transform.insert).Str()
+		let toInsert = g:COOPER_STR.New(a:transform.insert).Str()
 	endif
 	
 	let left = ""
@@ -487,7 +478,7 @@ function! s:Apply(transform, content, binder) dict
 		let lnum = count(left, "\n") + 1
 		let temp = GetLastIndexFromArray(str2list(left), str2list("\n")[0])
 		let startlineIndex = temp > 0 ? temp - 2  : 0
-		let content = CreateInstance(g:COOPER_STR,{}).New(content)
+		let content = g:COOPER_STR.New(content)
 		let col = len(content.UStr()[startlineIndex+1:a:transform.position-1 + len(middle) - 1]) + 1
 	elseif(position >= a:transform.position + numDelete)
 		let position = position - numDelete + len(middle)

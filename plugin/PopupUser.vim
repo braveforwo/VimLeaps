@@ -2,14 +2,9 @@ if(exists("g:POPUP_USER"))
 	finish
 endif
 
-" The path head for this script is needed for working with other modules.
-let s:SCRIPT_ROOT = expand("<sfile>:p:h") . "/"
+let s:popupUser = {}
+let g:POPUP_USER = s:popupUser
 
-" Apply object-oriented technique in our framework.
-exe "so ".s:SCRIPT_ROOT."ObjectBuilder.vim"
-
-let g:POPUP_USER=expand("<sfile>:p")
-call DefineClass(g:POPUP_USER,{},[])
 call prop_type_add('popupMarker', {})
 " @accessible
 function! s:New() dict 
@@ -64,7 +59,7 @@ function! s:ClosePopup() dict
 endfun
 
 function! PopupUserTest()
-	let s:popup = CreateInstance(g:POPUP_USER).New()
+	let s:popup = g:POPUP_USER.New()
 	call s:popup.SetOption(#{username: "username1", line: 2, col: 3, highlight: "CursorLineNr"})
 	call s:popup.CreatePopup()
 endfun

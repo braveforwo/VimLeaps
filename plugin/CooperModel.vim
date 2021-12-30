@@ -5,8 +5,9 @@ endif
 " cooper_model is an object designed to keep track of the inbound and outgoing transforms
 " for a local document, and updates the caller with the appropriate actions at each stage.
 
-let g:COOPER_MODEL=expand("<sfile>:p")
-call DefineClass(g:COOPER_MODEL,{},[])
+
+let s:cooperModel = {}
+let g:COOPER_MODEL = s:cooperModel
 
 " cooper_model has three states:
 " 1. READY     - No pending sends, transforms received can be applied instantly to local document.
@@ -15,7 +16,7 @@ call DefineClass(g:COOPER_MODEL,{},[])
 " 3. BUFFERING - A corrected version has been received for our latest send but we're still waiting
 "                for the transforms that came before that send to be received before moving on.
 " @accessible
-function! s:New(id, baseVersion) dict
+function! s:cooperModel.New(id, baseVersion) dict
 	let self.id = a:id
 	let self.READY = 1
 	let self.SENDING = 2
@@ -35,7 +36,7 @@ endfun
 " Validate Transforms iterates an array of transform objects and validates that each transform
 " contains the correct fields. Returns an error message as a string if there was a problem.
 " @accessible
-function! s:ValidateTransforms(transforms) dict
+function! s:cooperModel.ValidateTransforms(transforms) dict
 	for tform in a:transforms
 		if(type(tform.position) != v:t_number)
 			let tform.position = str2nr(tform.position)
@@ -64,13 +65,13 @@ function! s:ValidateTransforms(transforms) dict
 
 		if(has_key(tform,"insert"))
 			try
-				let tform.insert = CreateInstance(g:COOPER_STR,{}).New(tform.insert)
+				let tform.insert = g:COOPER_STR.New(tform.insert)
 			catch
 				echom v:exception
 				return "transform contained non-string value for insert: " . string(tform)
 			endtry
 		else
-			let tform.insert = CreateInstance(g:COOPER_STR,{}).New("")
+			let tform.insert = g:COOPER_STR.New("")
 		endif
 	endfor
 endfun
@@ -80,14 +81,14 @@ endfun
 " the function returns a boolean to indicate whether the merge was successful.
 "
 " @accessible
-function! s:MergeTransforms(first, second) dict
+function! s:cooperModel.MergeTransforms(first, second) dict
 	let overlap = 0
 	let remainder = 0
 	let first =a:first
 	let firstLen = len(first.insert.UStr())
 	
 	if((first.position + firstLen) == a:second.position)	
-		let first.insert = CreateInstance(g:COOPER_STR,{}).New(first.insert.Str() . a:second.insert.Str())
+		let first.insert = g:COOPER_STR.New(first.insert.Str() . a:second.insert.Str())
 		let first.num_delete = first.num_delete + a:second.num_delete
 		return 1
 	endif
@@ -95,7 +96,7 @@ function! s:MergeTransforms(first, second) dict
 	if(a:second.position == first.position)
 		let remainder = max([0, a:second.num_delete - firstLen])
 		let first.num_delete = first.num_delete + remainder
-		let first.insert = CreateInstance(g:COOPER_STR,{}).New(a:second.insert.Str() . list2str(first.insert.UStr()[a:second.num_delete:]))
+		let first.insert = g:COOPER_STR.New(a:second.insert.Str() . list2str(first.insert.UStr()[a:second.num_delete:]))
 		return 1	
 	endif
 
@@ -103,7 +104,7 @@ function! s:MergeTransforms(first, second) dict
 		let overlap = a:second.position - first.position
 		let remainder = max([0, a:second.num_delete -(firstLen - overlap)])
 		let first.num_delete = first.num_delete + remainder
-		let first.insert = CreateInstance(g:COOPER_STR,{}).New(list2str(first.insert.UStr()[0: overlap-1]) . a:second.insert.Str() . first.insert.Str() . list2str(first.insert.UStr()[overlap + a:second.num_delete:]))
+		let first.insert = g:COOPER_STR.New(list2str(first.insert.UStr()[0: overlap-1]) . a:second.insert.Str() . first.insert.Str() . list2str(first.insert.UStr()[overlap + a:second.num_delete:]))
 		return 1
 	endif
 	return 0
@@ -117,7 +118,7 @@ endfun
 " unaffected by the unapplied transform when submitted to the server.
 " 
 " @accessible
-function! s:CollideTransforms(unapplied, unsent) dict
+function! s:cooperModel.CollideTransforms(unapplied, unsent) dict
 	let earlier = {}
 	let later = {}
 
@@ -142,7 +143,7 @@ function! s:CollideTransforms(unapplied, unsent) dict
 
 		if(excess > later.num_delete)
 			let earlier.num_delete = earlier.num_delete + (laterLen - later.num_delete)
-			let earlier.insert = CreateInstance(g:COOPER_STR,{}).New(earlier.insert.Str() . later.insert.Str())
+			let earlier.insert = g:COOPER_STR.New(earlier.insert.Str() . later.insert.Str())
 		else
 			let earlier.num_delete = posGap
 		endif
@@ -156,7 +157,7 @@ endfun
 " state is determined to no longer be appropriate then it will return an object containing the
 " following actions to be performed.
 " @accessible
-function! s:ResolveState() dict
+function! s:cooperModel.ResolveState() dict
 	if(self.cooperState == self.READY)
 		
 	elseif(self.cooperState == self.SENDING)
@@ -206,7 +207,7 @@ endfun
 " gives the model the information it needs to determine which changes are missing from our model
 " from before our submission was accepted.
 " @accessible
-function! s:Correct(version) dict
+function! s:cooperModel.Correct(version) dict
 	if(self.cooperState == self.READY)
 		
 	elseif(self.cooperState == self.BUFFERING)
@@ -224,7 +225,7 @@ endfun
 " will determine whether it is currently safe to dispatch those changes to the server, and will
 " also provide each change with the correct version number.
 " @accessible
-function! s:Submit(transform) dict
+function! s:cooperModel.Submit(transform) dict
 	"echom "8888888"
 	if(self.cooperState == self.READY)
 		let self.cooperState = self.SENDING
@@ -248,7 +249,7 @@ endfun
 " these changes to our local document, so the model will keep return these transforms to us when it
 " is known to be safe.
 " @accessible
-function! s:Receive(transforms) dict
+function! s:cooperModel.Receive(transforms) dict
 	"echom "101010"
 	let expectedVersion = self.version + len(self.unapplied) + 1
 	if((len(a:transforms) > 0) && (a:transforms[0].version != expectedVersion))
