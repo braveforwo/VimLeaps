@@ -23,7 +23,7 @@ function! s:cooperModel.New(id, baseVersion) dict
 	let cooperModel.SENDING = 2
 	let cooperModel.BUFFERING = 3
 	
-	let cooperModel.cooperState = self.READY
+	let cooperModel.cooperState = cooperModel.READY
 	
 	let cooperModel.correctedVersion = 0
 	let cooperModel.version = a:baseVersion
