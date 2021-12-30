@@ -24,6 +24,7 @@ package io
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"leaps/lib/api"
 	"leaps/lib/api/events"
@@ -120,6 +121,7 @@ func (w *JSONEmitter) ListenAndEmit() {
 			Body json.RawMessage `json:"body"`
 		}
 		if err := w.rw.ReadJSON(&req); err != nil {
+			fmt.Println(err)
 			return
 		}
 		if handlers, ok := w.requestHandlers[req.Type]; ok {
