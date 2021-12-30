@@ -375,7 +375,8 @@ function! s:PosFromIndex(bufnr, position)
 endfun
 
 function! SendCursor()
-	call call(function("s:SendCursorMetadata", b:cooperBindVim),[])
+	"call call(function("s:SendCursorMetadata", b:cooperBindVim),[])
+	call b:cooperBindVim.SendCursorMetadata()
 endfun
 
 " @accessible
