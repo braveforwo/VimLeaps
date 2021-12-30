@@ -120,7 +120,6 @@ func StartOtConnection(conn net.Conn) {
 		fmt.Println("read vim connection error:", err)
 		return
 	}
-
 	br := NewProjectOtBroker(vh.TargetPath)
 
 	uuid := util.GenerateUUID()

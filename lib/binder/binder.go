@@ -31,7 +31,6 @@ import (
 	"leaps/lib/store"
 	"leaps/lib/text"
 	"leaps/lib/util/service/log"
-	"leaps/lib/util/service/metrics"
 )
 
 //------------------------------------------------------------------------------
@@ -68,8 +67,8 @@ type impl struct {
 	block    store.Type
 	auditor  audit.Auditor
 
-	log   log.Modular
-	stats metrics.Type
+	log log.Modular
+	// stats metrics.Type
 
 	// Clients
 	clients       []*binderClient
@@ -92,16 +91,16 @@ func New(
 	config Config,
 	errorChan chan<- Error,
 	log log.Modular,
-	stats metrics.Type,
+	// stats metrics.Type,
 	auditor audit.Auditor,
 ) (Type, error) {
 	binder := impl{
-		id:            id,
-		config:        config,
-		block:         block,
-		auditor:       auditor,
-		log:           log.NewModule(":binder"),
-		stats:         stats,
+		id:      id,
+		config:  config,
+		block:   block,
+		auditor: auditor,
+		log:     log.NewModule(":binder"),
+		// stats:         stats,
 		clients:       make([]*binderClient, 0),
 		subscribeChan: make(chan subscribeRequest),
 		transformChan: make(chan transformSubmission),
@@ -114,14 +113,14 @@ func New(
 
 	doc, err := block.Read(id)
 	if err != nil {
-		binder.stats.Incr("binder.block_fetch.error", 1)
+		// binder.stats.Incr("binder.block_fetch.error", 1)
 		return nil, err
 	}
 
 	binder.otBuffer = text.NewOTBuffer(doc.Content, config.OTBufferConfig)
 	go binder.loop()
 
-	stats.Incr("binder.new.success", 1)
+	// stats.Incr("binder.new.success", 1)
 	return &binder, nil
 }
 
@@ -240,14 +239,14 @@ func (b *impl) processSubscriber(request subscribeRequest) error {
 	}
 	select {
 	case request.portalChan <- &portal:
-		b.stats.Incr("binder.subscribed_clients", 1)
+		// b.stats.Incr("binder.subscribed_clients", 1)
 		b.log.Debugf("Subscribed new client %v\n", request.metadata)
 		b.clients = append(b.clients, &client)
 	case <-time.After(time.Duration(b.config.ClientKickPeriodMS) * time.Millisecond):
 		/* We're not bothered if you suck, you just don't get enrolled, and this isn't
 		 * considered an error. Deal with it.
 		 */
-		b.stats.Incr("binder.rejected_client", 1)
+		// b.stats.Incr("binder.rejected_client", 1)
 		b.log.Infof("Rejected client request %v\n", request.metadata)
 	}
 	return nil
@@ -262,7 +261,7 @@ func (b *impl) removeClient(client *binderClient) {
 	for i := 0; i < len(b.clients); i++ {
 		c := b.clients[i]
 		if c == client {
-			b.stats.Decr("binder.subscribed_clients", 1)
+			// b.stats.Decr("binder.subscribed_clients", 1)
 			b.clients = append(b.clients[:i], b.clients[i+1:]...)
 			i--
 
@@ -280,7 +279,7 @@ func (b *impl) sendClientError(errChan chan<- error, err error) {
 	case errChan <- err:
 	default:
 		b.log.Errorln("Send client error was blocked")
-		b.stats.Incr("binder.send_client_error.blocked", 1)
+		// b.stats.Incr("binder.send_client_error.blocked", 1)
 	}
 }
 
@@ -295,7 +294,7 @@ func (b *impl) processTransform(request transformSubmission) {
 
 	dispatch, version, err = b.otBuffer.PushTransform(request.transform)
 	if err != nil {
-		b.stats.Incr("binder.process_job.error", 1)
+		// b.stats.Incr("binder.process_job.error", 1)
 		b.sendClientError(request.errorChan, err)
 		return
 	}
@@ -307,9 +306,9 @@ func (b *impl) processTransform(request transformSubmission) {
 	case request.versionChan <- version:
 	default:
 		b.log.Errorln("Send client version was blocked")
-		b.stats.Incr("binder.send_client_version.blocked", 1)
+		// b.stats.Incr("binder.send_client_version.blocked", 1)
 	}
-	b.stats.Incr("binder.process_job.success", 1)
+	// b.stats.Incr("binder.process_job.success", 1)
 
 	clientKickPeriod := (time.Duration(b.config.ClientKickPeriodMS) * time.Millisecond)
 
@@ -332,7 +331,7 @@ func (b *impl) processTransform(request transformSubmission) {
 				/* The client may have stopped listening, or is just being slow.
 				 * Either way, we have a strict policy here of no time wasters.
 				 */
-				b.stats.Incr("binder.clients_kicked", 1)
+				// b.stats.Incr("binder.clients_kicked", 1)
 				b.log.Debugf("Kicking client for user: (%v) for blocked transform send\n", c.metadata)
 				b.removeClient(c)
 			}
@@ -369,12 +368,12 @@ func (b *impl) processMetadata(request metadataSubmission) {
 		go func(c *binderClient) {
 			select {
 			case c.metadataChan <- metadata:
-				b.stats.Incr("binder.sent_metadata", 1)
+				// b.stats.Incr("binder.sent_metadata", 1)
 			case <-time.After(clientKickPeriod):
 				/* The client may have stopped listening, or is just being slow.
 				 * Either way, we have a strict policy here of no time wasters.
 				 */
-				b.stats.Incr("binder.clients_kicked", 1)
+				// b.stats.Incr("binder.clients_kicked", 1)
 				b.log.Debugf("Kicking client for user: (%v) for blocked transform send\n", c.metadata)
 				b.removeClient(c)
 			}
@@ -395,7 +394,7 @@ func (b *impl) flush() (store.Document, error) {
 	)
 	doc, errStore = b.block.Read(b.id)
 	if errStore != nil {
-		b.stats.Incr("binder.block_fetch.error", 1)
+		// b.stats.Incr("binder.block_fetch.error", 1)
 		return doc, errStore
 	}
 	changed, errFlush = b.otBuffer.FlushTransforms(&doc.Content, b.config.RetentionPeriodS)
@@ -403,11 +402,11 @@ func (b *impl) flush() (store.Document, error) {
 		errStore = b.block.Update(doc)
 	}
 	if errStore != nil || errFlush != nil {
-		b.stats.Incr("binder.flush.error", 1)
+		// b.stats.Incr("binder.flush.error", 1)
 		return doc, fmt.Errorf("%v, %v", errFlush, errStore)
 	}
 	if changed {
-		b.stats.Incr("binder.flush.success", 1)
+		// b.stats.Incr("binder.flush.success", 1)
 	}
 	return doc, nil
 }
@@ -490,7 +489,7 @@ func (b *impl) loop() {
 			flushTimer.Stop()
 			closeTimer.Stop()
 
-			b.stats.Incr("binder.closing", 1)
+			// b.stats.Incr("binder.closing", 1)
 			b.log.Infoln("Closing, shutting down client channels")
 			oldClients := b.clients
 			b.clients = make([]*binderClient, 0)

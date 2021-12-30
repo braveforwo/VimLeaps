@@ -33,7 +33,6 @@ import (
 	"leaps/lib/binder"
 	"leaps/lib/store"
 	"leaps/lib/util/service/log"
-	"leaps/lib/util/service/metrics"
 )
 
 //------------------------------------------------------------------------------
@@ -66,8 +65,8 @@ type Impl struct {
 	auth     acl.Authenticator
 	auditors AuditorContainer
 
-	log   log.Modular
-	stats metrics.Type
+	log log.Modular
+	// stats metrics.Type
 
 	// Binders
 	openBinders map[string]binder.Type
@@ -131,7 +130,7 @@ func (c *Impl) loop() {
 		select {
 		case err := <-c.errorChan:
 			if err.Err != nil {
-				c.stats.Incr("curator.binder_chan.error", 1)
+				// c.stats.Incr("curator.binder_chan.error", 1)
 				c.log.Errorf("Binder (%v) %v\n", err.ID, err.Err)
 			} else {
 				c.log.Infof("Binder (%v) has requested shutdown\n", err.ID)
@@ -141,11 +140,11 @@ func (c *Impl) loop() {
 				b.Close()
 				delete(c.openBinders, err.ID)
 				c.log.Infof("Binder (%v) was closed\n", err.ID)
-				c.stats.Incr("curator.binder_shutdown.success", 1)
-				c.stats.Decr("curator.open_binders", 1)
+				// c.stats.Incr("curator.binder_shutdown.success", 1)
+				// c.stats.Decr("curator.open_binders", 1)
 			} else {
 				c.log.Errorf("Binder (%v) was not located in map\n", err.ID)
-				c.stats.Incr("curator.binder_shutdown.error", 1)
+				// c.stats.Incr("curator.binder_shutdown.error", 1)
 			}
 			c.binderMutex.Unlock()
 		case <-c.closeChan:
@@ -153,7 +152,7 @@ func (c *Impl) loop() {
 			c.binderMutex.Lock()
 			for _, b := range c.openBinders {
 				b.Close()
-				c.stats.Decr("curator.open_binders", 1)
+				// c.stats.Decr("curator.open_binders", 1)
 			}
 			c.binderMutex.Unlock()
 			close(c.closedChan)
@@ -170,8 +169,11 @@ func (c *Impl) newBinder(id string) (binder.Type, error) {
 			return nil, fmt.Errorf("failed to create auditor: %v", err)
 		}
 	}
+	// return binder.New(
+	// 	id, c.store, c.config.BinderConfig, c.errorChan, c.log, c.stats, auditor,
+	// )
 	return binder.New(
-		id, c.store, c.config.BinderConfig, c.errorChan, c.log, c.stats, auditor,
+		id, c.store, c.config.BinderConfig, c.errorChan, c.log, auditor,
 	)
 }
 
@@ -186,12 +188,12 @@ func (c *Impl) EditDocument(
 	c.log.Debugf("finding document %v, with userMetadata %v token %v\n", documentID, userMetadata, token)
 
 	if c.auth.Authenticate(userMetadata, token, documentID) < acl.EditAccess {
-		c.stats.Incr("curator.edit.rejected_client", 1)
+		// c.stats.Incr("curator.edit.rejected_client", 1)
 		return nil, fmt.Errorf(
 			"failed to authorise join of document id: %v with token: %v", documentID, token,
 		)
 	}
-	c.stats.Incr("curator.edit.accepted_client", 1)
+	// c.stats.Incr("curator.edit.accepted_client", 1)
 
 	c.binderMutex.Lock()
 
@@ -204,14 +206,14 @@ func (c *Impl) EditDocument(
 	if err != nil {
 		c.binderMutex.Unlock()
 
-		c.stats.Incr("curator.bind_new.failed", 1)
+		// c.stats.Incr("curator.bind_new.failed", 1)
 		c.log.Errorf("Failed to bind to document %v: %v\n", documentID, err)
 		return nil, err
 	}
 	c.openBinders[documentID] = openBinder
 	c.binderMutex.Unlock()
 
-	c.stats.Incr("curator.open_binders", 1)
+	// c.stats.Incr("curator.open_binders", 1)
 	return openBinder.Subscribe(userMetadata, timeout)
 }
 
@@ -224,13 +226,13 @@ func (c *Impl) ReadDocument(
 	c.log.Debugf("finding document %v, with userMetadata %v token %v\n", documentID, userMetadata, token)
 
 	if c.auth.Authenticate(userMetadata, token, documentID) < acl.ReadAccess {
-		c.stats.Incr("curator.read.rejected_client", 1)
+		// c.stats.Incr("curator.read.rejected_client", 1)
 		return nil, fmt.Errorf(
 			"failed to authorise read only join of document id: %v with token: %v",
 			documentID, token,
 		)
 	}
-	c.stats.Incr("curator.read.accepted_client", 1)
+	// c.stats.Incr("curator.read.accepted_client", 1)
 
 	c.binderMutex.Lock()
 
@@ -243,14 +245,14 @@ func (c *Impl) ReadDocument(
 	if err != nil {
 		c.binderMutex.Unlock()
 
-		c.stats.Incr("curator.bind_existing.failed", 1)
+		// c.stats.Incr("curator.bind_existing.failed", 1)
 		c.log.Errorf("Failed to bind to document %v: %v\n", documentID, err)
 		return nil, err
 	}
 	c.openBinders[documentID] = openBinder
 	c.binderMutex.Unlock()
 
-	c.stats.Incr("curator.open_binders", 1)
+	// c.stats.Incr("curator.open_binders", 1)
 	return openBinder.SubscribeReadOnly(userMetadata, timeout)
 }
 
@@ -264,26 +266,26 @@ func (c *Impl) CreateDocument(
 	c.log.Debugf("Creating new document with userMetadata %v token %v\n", userMetadata, token)
 
 	if c.auth.Authenticate(userMetadata, token, "") < acl.CreateAccess {
-		c.stats.Incr("curator.create.rejected_client", 1)
+		// c.stats.Incr("curator.create.rejected_client", 1)
 		return nil, fmt.Errorf("failed to gain permission to create with token: %v", token)
 	}
-	c.stats.Incr("curator.create.accepted_client", 1)
+	// c.stats.Incr("curator.create.accepted_client", 1)
 
 	if err := c.store.Create(doc); err != nil {
-		c.stats.Incr("curator.create_new.failed", 1)
+		// c.stats.Incr("curator.create_new.failed", 1)
 		c.log.Errorf("Failed to create new document: %v\n", err)
 		return nil, err
 	}
 	openBinder, err := c.newBinder(doc.ID)
 	if err != nil {
-		c.stats.Incr("curator.bind_new.failed", 1)
+		// c.stats.Incr("curator.bind_new.failed", 1)
 		c.log.Errorf("Failed to bind to new document: %v\n", err)
 		return nil, err
 	}
 	c.binderMutex.Lock()
 	c.openBinders[doc.ID] = openBinder
 	c.binderMutex.Unlock()
-	c.stats.Incr("curator.open_binders", 1)
+	// c.stats.Incr("curator.open_binders", 1)
 
 	return openBinder.Subscribe(userMetadata, timeout)
 }

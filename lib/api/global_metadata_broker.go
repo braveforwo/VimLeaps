@@ -29,7 +29,6 @@ import (
 
 	"leaps/lib/api/events"
 	"leaps/lib/util/service/log"
-	"leaps/lib/util/service/metrics"
 )
 
 //------------------------------------------------------------------------------
@@ -44,7 +43,7 @@ type GlobalMetadataBroker struct {
 
 	timeout time.Duration
 	logger  log.Modular
-	stats   metrics.Type
+	// stats   metrics.Type
 
 	userMapMut  sync.Mutex
 	emittersMut sync.Mutex
@@ -80,7 +79,7 @@ func (b *GlobalMetadataBroker) NewEmitter(username, uuid string, e Emitter) {
 			}
 			// Just incase
 			if b.emitters[i] == e {
-				b.stats.Decr("api.global_metadata_broker.emitters", 1)
+				// b.stats.Decr("api.global_metadata_broker.emitters", 1)
 				b.emitters = append(b.emitters[:i], b.emitters[i+1:]...)
 			}
 		}
@@ -158,7 +157,7 @@ func (b *GlobalMetadataBroker) NewEmitter(username, uuid string, e Emitter) {
 	e.OnReceive(events.GlobalMetadata, func(body []byte) events.TypedError {
 		var req events.GlobalMetadataMessage
 		if err := json.Unmarshal(body, &req); err != nil {
-			b.stats.Incr("api.global_metadata_broker.metadata.error.json", 1)
+			// b.stats.Incr("api.global_metadata_broker.metadata.error.json", 1)
 			b.logger.Warnf("Message parse error: %v\n", err)
 			return events.NewAPIError(events.ErrBadJSON, err.Error())
 		}
@@ -198,7 +197,7 @@ func (b *GlobalMetadataBroker) NewEmitter(username, uuid string, e Emitter) {
 		Metadata: events.MetadataBody{Type: events.UserConnect, Body: nil},
 	})
 
-	b.stats.Incr("api.global_metadata_broker.emitters", 1)
+	// b.stats.Incr("api.global_metadata_broker.emitters", 1)
 }
 
 // dispatch - Dispatch an event to all active emitters, this is done
