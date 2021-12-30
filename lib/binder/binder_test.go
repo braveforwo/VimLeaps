@@ -75,10 +75,10 @@ func (s *testStore) Read(id string) (store.Document, error) {
 func TestFailedInitialFlush(t *testing.T) {
 	errChan := make(chan Error, 10)
 
-	logger, stats := loggerAndStats()
+	logger := loggerAndStats()
 	storage := testStore{documents: nil}
 
-	_, err := New("KILL_ME", &storage, NewConfig(), errChan, logger, stats, nil)
+	_, err := New("KILL_ME", &storage, NewConfig(), errChan, logger, nil)
 	if err == nil {
 		t.Error("Expected error from failed initial flush")
 	}
@@ -96,7 +96,7 @@ func (d *dumbAuditor) OnTransform(t text.OTransform) error {
 func TestAuditor(t *testing.T) {
 	errChan := make(chan Error, 10)
 
-	logger, stats := loggerAndStats()
+	logger := loggerAndStats()
 	doc := store.NewDocument("hello world")
 
 	storage := testStore{documents: map[string]store.Document{
@@ -105,7 +105,7 @@ func TestAuditor(t *testing.T) {
 
 	auditor := &dumbAuditor{}
 
-	binder, err := New("KILL_ME", &storage, NewConfig(), errChan, logger, stats, auditor)
+	binder, err := New("KILL_ME", &storage, NewConfig(), errChan, logger, auditor)
 	if err != nil {
 		t.Errorf("Error: %v", err)
 		return
@@ -141,14 +141,14 @@ func TestAuditor(t *testing.T) {
 func TestGracefullShutdown(t *testing.T) {
 	errChan := make(chan Error, 10)
 
-	logger, stats := loggerAndStats()
+	logger := loggerAndStats()
 	doc := store.NewDocument("hello world")
 
 	storage := testStore{documents: map[string]store.Document{
 		"KILL_ME": doc,
 	}}
 
-	binder, err := New("KILL_ME", &storage, NewConfig(), errChan, logger, stats, nil)
+	binder, err := New("KILL_ME", &storage, NewConfig(), errChan, logger, nil)
 	if err != nil {
 		t.Errorf("Error: %v", err)
 		return
@@ -175,7 +175,7 @@ func TestGracefullShutdown(t *testing.T) {
 func TestClientExitAndShutdown(t *testing.T) {
 	errChan := make(chan Error, 10)
 
-	logger, stats := loggerAndStats()
+	logger := loggerAndStats()
 	doc := store.NewDocument("hello world")
 
 	storage := testStore{documents: map[string]store.Document{
@@ -186,7 +186,7 @@ func TestClientExitAndShutdown(t *testing.T) {
 	conf.ClientKickPeriodMS = 1        // Basically do not block at all on clients
 	conf.CloseInactivityPeriodMS = 500 // 1 second of inactivity before we close
 
-	binder, err := New("KILL_ME", &storage, conf, errChan, logger, stats, nil)
+	binder, err := New("KILL_ME", &storage, conf, errChan, logger, nil)
 	if err != nil {
 		t.Errorf("Error: %v", err)
 		return
@@ -233,7 +233,7 @@ func TestClientExitAndShutdown(t *testing.T) {
 func TestKickLockedUsers(t *testing.T) {
 	errChan := make(chan Error, 10)
 
-	logger, stats := loggerAndStats()
+	logger := loggerAndStats()
 	doc := store.NewDocument("hello world")
 
 	store := testStore{documents: map[string]store.Document{
@@ -243,7 +243,7 @@ func TestKickLockedUsers(t *testing.T) {
 	conf := NewConfig()
 	conf.ClientKickPeriodMS = 1
 
-	binder, err := New("KILL_ME", &store, conf, errChan, logger, stats, nil)
+	binder, err := New("KILL_ME", &store, conf, errChan, logger, nil)
 	if err != nil {
 		t.Errorf("Error: %v", err)
 		return
@@ -277,7 +277,7 @@ func TestKickLockedUsers(t *testing.T) {
 func TestUpdates(t *testing.T) {
 	errChan := make(chan Error)
 	doc := store.NewDocument("hello world")
-	logger, stats := loggerAndStats()
+	logger := loggerAndStats()
 
 	binder, err := New(
 		doc.ID,
@@ -285,7 +285,6 @@ func TestUpdates(t *testing.T) {
 		NewConfig(),
 		errChan,
 		logger,
-		stats,
 		nil,
 	)
 	if err != nil {
@@ -357,7 +356,7 @@ func TestUpdates(t *testing.T) {
 func TestUpdatesSameUserID(t *testing.T) {
 	errChan := make(chan Error)
 	doc := store.NewDocument("hello world")
-	logger, stats := loggerAndStats()
+	logger := loggerAndStats()
 
 	binder, err := New(
 		doc.ID,
@@ -365,7 +364,6 @@ func TestUpdatesSameUserID(t *testing.T) {
 		NewConfig(),
 		errChan,
 		logger,
-		stats,
 		nil,
 	)
 	if err != nil {
@@ -417,7 +415,7 @@ func TestUpdatesSameUserID(t *testing.T) {
 func TestNew(t *testing.T) {
 	errChan := make(chan Error)
 	doc := store.NewDocument("hello world")
-	logger, stats := loggerAndStats()
+	logger := loggerAndStats()
 
 	binder, err := New(
 		doc.ID,
@@ -425,7 +423,6 @@ func TestNew(t *testing.T) {
 		NewConfig(),
 		errChan,
 		logger,
-		stats,
 		nil,
 	)
 	if err != nil {
@@ -476,7 +473,7 @@ func TestNew(t *testing.T) {
 func TestReadOnlyPortals(t *testing.T) {
 	errChan := make(chan Error)
 	doc := store.NewDocument("hello world")
-	logger, stats := loggerAndStats()
+	logger := loggerAndStats()
 
 	binder, err := New(
 		doc.ID,
@@ -484,7 +481,6 @@ func TestReadOnlyPortals(t *testing.T) {
 		NewConfig(),
 		errChan,
 		logger,
-		stats,
 		nil,
 	)
 	if err != nil {
@@ -572,7 +568,7 @@ func goodClient(b Portal, expecting int, t *testing.T, wg *sync.WaitGroup) {
 func TestClients(t *testing.T) {
 	errChan := make(chan Error)
 	doc := store.NewDocument("hello world")
-	logger, stats := loggerAndStats()
+	logger := loggerAndStats()
 
 	config := NewConfig()
 	config.FlushPeriodMS = 5000
@@ -585,7 +581,6 @@ func TestClients(t *testing.T) {
 		NewConfig(),
 		errChan,
 		logger,
-		stats,
 		nil,
 	)
 	if err != nil {
@@ -675,7 +670,7 @@ func goodStoryClient(b Portal, bstory *binderStory, wg *sync.WaitGroup, t *testi
 
 func TestBinderStories(t *testing.T) {
 	nClients := 10
-	logger, stats := loggerAndStats()
+	logger := loggerAndStats()
 
 	bytes, err := ioutil.ReadFile("../../test/stories/binder_stories.js")
 	if err != nil {
@@ -708,7 +703,6 @@ func TestBinderStories(t *testing.T) {
 			config,
 			errChan,
 			logger,
-			stats,
 			nil,
 		)
 		if err != nil {

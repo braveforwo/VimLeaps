@@ -33,7 +33,6 @@ import (
 	"leaps/lib/curator"
 	"leaps/lib/text"
 	"leaps/lib/util/service/log"
-	"leaps/lib/util/service/metrics"
 )
 
 //------------------------------------------------------------------------------
@@ -47,7 +46,7 @@ type CuratorSession struct {
 
 	timeout time.Duration
 	logger  log.Modular
-	stats   metrics.Type
+	// stats   metrics.Type
 
 	username  string
 	uuid      string
@@ -101,7 +100,7 @@ func NewCuratorSession(
 func (s *CuratorSession) subscribe(body []byte) events.TypedError {
 	var req events.SubscriptionMessage
 	if err := json.Unmarshal(body, &req); err != nil {
-		s.stats.Incr("api.session.subscribe.error.json", 1)
+		// s.stats.Incr("api.session.subscribe.error.json", 1)
 		s.logger.Warnf("Subscribe parse error: %v\n", err)
 		return events.NewAPIError(events.ErrBadJSON, err.Error())
 	}
@@ -111,7 +110,7 @@ func (s *CuratorSession) subscribe(body []byte) events.TypedError {
 
 	// The API is currently limited to one subscription per connection.
 	if _, exists := s.portals[req.Document.ID]; exists {
-		s.stats.Incr("api.session.subscribe.error.already_subscribed", 1)
+		// s.stats.Incr("api.session.subscribe.error.already_subscribed", 1)
 		return events.NewAPIError(
 			events.ErrExistingSub,
 			fmt.Sprintf("This session is already subscribed to document %v", req.Document.ID),
@@ -122,7 +121,7 @@ func (s *CuratorSession) subscribe(body []byte) events.TypedError {
 		events.Client{Username: s.username, SessionID: s.uuid}, "", req.Document.ID, s.timeout,
 	)
 	if err != nil {
-		s.stats.Incr("api.session.subscribe.error.curator", 1)
+		// s.stats.Incr("api.session.subscribe.error.curator", 1)
 		s.logger.Warnf("Subscribe edit error: %v\n", err)
 		return events.NewAPIError(events.ErrSubscribe, err.Error())
 	}
@@ -133,8 +132,8 @@ func (s *CuratorSession) subscribe(body []byte) events.TypedError {
 			Version: portal.BaseVersion(),
 		},
 	})
-	s.stats.Incr("api.session.subscribe.success", 1)
-	s.stats.Incr("api.session.subscribed", 1)
+	// s.stats.Incr("api.session.subscribe.success", 1)
+	// s.stats.Incr("api.session.subscribed", 1)
 	s.portals[req.Document.ID] = portal
 	portal.ReleaseDocument()
 
@@ -169,7 +168,7 @@ func (s *CuratorSession) subscribe(body []byte) events.TypedError {
 		delete(s.portals, req.Document.ID)
 		s.portalMut.Unlock()
 
-		s.stats.Decr("api.session.subscribed", 1)
+		// s.stats.Decr("api.session.subscribed", 1)
 		s.emitter.Send(events.Unsubscribe, events.UnsubscriptionMessage{
 			Document: events.DocumentStripped{
 				ID: req.Document.ID,
@@ -183,7 +182,7 @@ func (s *CuratorSession) subscribe(body []byte) events.TypedError {
 func (s *CuratorSession) unsubscribe(body []byte) events.TypedError {
 	var req events.UnsubscriptionMessage
 	if err := json.Unmarshal(body, &req); err != nil {
-		s.stats.Incr("api.session.unsubscribe.error.json", 1)
+		// s.stats.Incr("api.session.unsubscribe.error.json", 1)
 		s.logger.Warnf("Unsubscribe parse error: %v\n", err)
 		return events.NewAPIError(events.ErrBadJSON, err.Error())
 	}
@@ -193,14 +192,14 @@ func (s *CuratorSession) unsubscribe(body []byte) events.TypedError {
 
 	portal, exists := s.portals[req.Document.ID]
 	if !exists {
-		s.stats.Incr("api.session.unsubscribe.error.not_subscribed", 1)
+		// s.stats.Incr("api.session.unsubscribe.error.not_subscribed", 1)
 		return events.NewAPIError(
 			events.ErrNoSub,
 			fmt.Sprintf("This session is not yet subscribed to document %v", req.Document.ID),
 		)
 	}
 	portal.Exit(s.timeout)
-	s.stats.Incr("api.session.unsubscribe.success", 1)
+	// s.stats.Incr("api.session.unsubscribe.success", 1)
 	return nil
 }
 
@@ -208,7 +207,7 @@ func (s *CuratorSession) unsubscribe(body []byte) events.TypedError {
 func (s *CuratorSession) transform(body []byte) events.TypedError {
 	var req events.TransformMessage
 	if err := json.Unmarshal(body, &req); err != nil {
-		s.stats.Incr("api.session.transform.error.json", 1)
+		// s.stats.Incr("api.session.transform.error.json", 1)
 		s.logger.Warnf("Transform parse error: %v\n", err)
 		return events.NewAPIError(events.ErrBadJSON, err.Error())
 	}
@@ -218,7 +217,7 @@ func (s *CuratorSession) transform(body []byte) events.TypedError {
 
 	portal, exists := s.portals[req.Document.ID]
 	if !exists {
-		s.stats.Incr("api.session.transform.error.not_subscribed", 1)
+		// s.stats.Incr("api.session.transform.error.not_subscribed", 1)
 		return events.NewAPIError(
 			events.ErrNoSub,
 			fmt.Sprintf("This session is not yet subscribed to document %v", req.Document.ID),
@@ -227,11 +226,11 @@ func (s *CuratorSession) transform(body []byte) events.TypedError {
 
 	v, err := portal.SendTransform(req.Transform, s.timeout)
 	if err != nil {
-		s.stats.Incr("api.session.transform.error.send", 1)
+		// s.stats.Incr("api.session.transform.error.send", 1)
 		s.logger.Warnf("Transform send error: %v\n", err)
 		return events.NewAPIError(events.ErrTransform, err.Error())
 	}
-	s.stats.Incr("api.session.transform.success", 1)
+	// s.stats.Incr("api.session.transform.success", 1)
 	s.emitter.Send(events.Correction, events.CorrectionMessage{
 		Document: events.DocumentStripped{
 			ID: portal.Document().ID,
@@ -247,7 +246,7 @@ func (s *CuratorSession) transform(body []byte) events.TypedError {
 func (s *CuratorSession) metadata(body []byte) events.TypedError {
 	var req events.MetadataMessage
 	if err := json.Unmarshal(body, &req); err != nil {
-		s.stats.Incr("api.session.metadata.error.json", 1)
+		// s.stats.Incr("api.session.metadata.error.json", 1)
 		s.logger.Warnf("Metadata parse error: %v\n", err)
 		return events.NewAPIError(events.ErrBadJSON, err.Error())
 	}
@@ -257,13 +256,13 @@ func (s *CuratorSession) metadata(body []byte) events.TypedError {
 
 	portal, exists := s.portals[req.Document.ID]
 	if !exists {
-		s.stats.Incr("api.session.transform.error.not_subscribed", 1)
+		// s.stats.Incr("api.session.transform.error.not_subscribed", 1)
 		return events.NewAPIError(
 			events.ErrNoSub,
 			fmt.Sprintf("This session is not yet subscribed to document %v", req.Document.ID),
 		)
 	}
-	s.stats.Incr("api.session.metadata.success", 1)
+	// s.stats.Incr("api.session.metadata.success", 1)
 	portal.SendMetadata(req.Metadata)
 	return nil
 }
