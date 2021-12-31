@@ -42,6 +42,7 @@ import (
 )
 
 //------------------------------------------------------------------------------
+var br *ProjectOtBroker = nil
 
 type OtConnection struct {
 	projectID  string
@@ -120,7 +121,9 @@ func StartOtConnection(conn net.Conn) {
 		fmt.Println("read vim connection error:", err)
 		return
 	}
-	br := NewProjectOtBroker(vh.TargetPath)
+	if br == nil {
+		br = NewProjectOtBroker(vh.TargetPath)
+	}
 
 	uuid := util.GenerateUUID()
 

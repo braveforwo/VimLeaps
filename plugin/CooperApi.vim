@@ -116,12 +116,12 @@ endfun
 
 function! JoinTest()
 	set noswapfile
-	call s:StartCollaborative("/home/clouder/project/test123/te.vim", "/home/clouder/project/test123/", "username2","51988002")
+	call s:StartCollaborative("test.txt", "E:\\software\\gitproject\\leaps-master\\leaps\\lib\\", "username2","51988002")
 endfun
 
 function! JoinTest2()
 	set noswapfile
-	call s:StartCollaborative("/home/clouder/project/test123/te.vim", "/home/clouder/project/test123/", "username3","51988002")
+	call s:StartCollaborative("test.txt", "E:\\software\\gitproject\\leaps-master\\leaps\\lib\\", "username3","51988002")
 endfun
 
 function! TwoBufFile()
